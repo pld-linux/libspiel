@@ -1,21 +1,19 @@
-# TODO:
-# - install and package apidocs
 #
 # Conditional build:
-%bcond_with	apidocs		# API documentation (not installed yet)
+%bcond_without	apidocs		# API documentation
 %bcond_without	tests		# unit tests
 #
 Summary:	Shared library for speech synthesis clients
 Summary(pl.UTF-8):	Biblioteka współdzielona dla klientów syntezy mowy
 Name:		libspiel
-Version:	1.0.3
+Version:	1.0.4
 %define	gitref	SPIEL_%(echo %{version} | tr . _)
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 #Source0Download: https://github.com/project-spiel/libspiel/tags
 Source0:	https://github.com/project-spiel/libspiel/archive/%{gitref}/%{name}-%{gitref}.tar.gz
-# Source0-md5:	dde24d4005a5141d30e60aeae108d437
+# Source0-md5:	462459849eefea7501df1bdf09136af0
 URL:		https://project-spiel.org/libspiel/
 %{?with_apidocs:BuildRequires:	gi-docgen}
 BuildRequires:	glib2-devel >= 1:2.76
@@ -76,19 +74,25 @@ Dokumentacja API biblioteki spiel.
 %setup -q -n %{name}-%{gitref}
 
 %build
-%meson build \
-	%{!?with_tests:-Dtests=disabled}
+%meson \
+	%{!?with_apidocs:-Ddocs=false} \
+	%{!?with_tests:-Dtests=false}
 
-%ninja_build -C build
+%meson_build
 
 %if %{with tests}
-%ninja_test -C build
+%meson_test
 %endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
 
-%ninja_install -C build
+%meson_install
+
+%if %{with apidocs}
+install -d $RPM_BUILD_ROOT%{_gidocdir}
+%{__mv} $RPM_BUILD_ROOT%{_docdir}/libspiel $RPM_BUILD_ROOT%{_gidocdir}
+%endif
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -105,12 +109,14 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(644,root,root,755)
 %doc AUTHORS README.md
 %attr(755,root,root) %{_bindir}/spiel
-%attr(755,root,root) %{_libdir}/libspiel-1.0.so
+%attr(755,root,root) %{_libdir}/libspiel-1.0.so.1.0.4
+%ghost %{_libdir}/libspiel-1.0.so.1
 %{_libdir}/girepository-1.0/Spiel-1.0.typelib
 %{_datadir}/glib-2.0/schemas/org.monotonous.libspiel.gschema.xml
 
 %files devel
 %defattr(644,root,root,755)
+%{_libdir}/libspiel-1.0.so
 %{_includedir}/spiel
 %{_datadir}/gir-1.0/Spiel-1.0.gir
 %{_pkgconfigdir}/spiel-1.0.pc
@@ -118,5 +124,5 @@ rm -rf $RPM_BUILD_ROOT
 %if %{with apidocs}
 %files apidocs
 %defattr(644,root,root,755)
-%{_gidocdir}/spiel-1.0
+%{_gidocdir}/libspiel
 %endif
